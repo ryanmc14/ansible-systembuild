@@ -1,0 +1,106 @@
+---
+- name: Install packages
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Ensure nvim is installed.
+      dnf:
+        name: neovim
+        state: present
+    - name: Ensure Tmux is installed
+      dnf:
+        name: tmux
+        state: present
+    - name: Ensure git is installed
+      dnf:
+        name: git
+        state: present
+    - name: Install golang
+      dnf:
+        name: golang
+        state: present
+    - name: Install go docs
+      dnf:
+        name: golang-godoc
+        state: present
+    - name: Install gopls
+      dnf:
+        name: golang-x-tools-gopls
+        state: present
+    - name: Check stow installed
+      dnf:
+        name: stow
+        state: present
+    - name: Check zsh installed
+      dnf:
+        name: zsh
+        state: present
+    - name: Check zsh-syntax installed
+      dnf:
+        name: zsh-syntax-highlighting
+        state: present
+    - name: Check g++ installed
+      dnf:
+        name: g++
+        state: present
+    - name: Check fzf installed
+      dnf:
+        name: fzf
+        state: present
+    - name: Check fd installed
+      dnf:
+        name: fd-find
+        state: present
+    - name: Check jq installed
+      dnf:
+        name: jq
+        state: present
+    - name: Check tidy installed
+      dnf:
+        name: tidy
+        state: present
+    - name: Check ripgrep installed
+      dnf:
+        name: ripgrep
+        state: present
+    - name: Check wireshark installed
+      dnf:
+        name: wireshark
+        state: present
+    - name: Check remminna installed
+      dnf:
+        name: remmina
+        state: present
+    - name: Check azure-cli installed
+      dnf:
+        name: azure-cli
+        state: present
+    - name: Check podman-cli installed
+      dnf:
+        name: podman
+        state: present
+
+- name: non privileged tasks
+  hosts: localhost
+  tasks:
+    - name: run stow
+      shell: "stow --dir /home/rmcle/Rsync/dotfiles --target {{ ansible_env.HOME }} . --verbose=2"
+      register: result
+      changed_when: 'result.stderr is search("LINK: ")'
+    - name: Clone tmux package manager
+      git:
+        repo: 'https://github.com/tmux-plugins/tpm.git'
+        dest: '{{ ansible_env.HOME }}/.tmux/plugins/tpm'
+- name: set up zsh for user
+  hosts: localhost
+  vars:
+    the_user: "{{ ansible_user_id }}"
+  tasks:
+    - name: change user shell to zsh
+      become: yes
+      user:
+        name: "{{ the_user }}"
+        shell: /usr/bin/zsh
+    - name: fzf keybinds
+      become: yes
+      shell: "cp /usr/share/doc/fzf/examples/*.zsh /usr/share/fzf/shell"
