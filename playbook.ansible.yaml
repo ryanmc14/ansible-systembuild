@@ -79,6 +79,31 @@
       dnf:
         name: podman
         state: present
+    - name: add hashicorp repo
+      shell: "curl https://rpm.releases.hashicorp.com/fedora/hashicorp.repo >> /etc/yum.repos.d/hashicorp.repo"
+    - name: add kube repo
+      shell: |
+            cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+            [kubernetes]
+            name=Kubernetes
+            baseurl=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/
+            enabled=1
+            gpgcheck=1
+            gpgkey=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/repodata/repomd.xml.key
+            EOF
+    - name: Check terraform installed
+      dnf:
+        name: terraform
+        state: present
+    - name: Check kubectl installed
+      dnf:
+        name: kubectl
+        state: present
+    - name: Install k9s
+      shell: "go install github.com/derailed/k9s@latest && mkdir -p .kube"
+    - name: create cert dir
+      shell: "mkdir -p ~/.cert && restorecon -R ~/.cert"
+
 
 - name: non privileged tasks
   hosts: localhost
@@ -101,6 +126,3 @@
       user:
         name: "{{ the_user }}"
         shell: /usr/bin/zsh
-    - name: fzf keybinds
-      become: yes
-      shell: "cp /usr/share/doc/fzf/examples/*.zsh /usr/share/fzf/shell"
