@@ -55,6 +55,10 @@
       dnf:
         name: jq
         state: present
+    - name: Check yq installed
+      dnf:
+        name: yq
+        state: present
     - name: Check tidy installed
       dnf:
         name: tidy
@@ -79,8 +83,14 @@
       dnf:
         name: podman
         state: present
+    - name: Check helm install
+      dnf:
+        name: helm
+        state: present
     - name: add hashicorp repo
       shell: "curl https://rpm.releases.hashicorp.com/fedora/hashicorp.repo >> /etc/yum.repos.d/hashicorp.repo"
+      args:
+        creates: "/etc/yum.repos.d/hashicorp.repo"
     - name: add kube repo
       shell: |
             cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
@@ -91,6 +101,8 @@
             gpgcheck=1
             gpgkey=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/repodata/repomd.xml.key
             EOF
+      args:
+        creates: "/etc/yum.repos.d/kubernetes.repo"
     - name: Check terraform installed
       dnf:
         name: terraform
@@ -99,10 +111,10 @@
       dnf:
         name: kubectl
         state: present
-    - name: Install k9s
-      shell: "go install github.com/derailed/k9s@latest && mkdir -p .kube"
     - name: create cert dir
       shell: "mkdir -p ~/.cert && restorecon -R ~/.cert"
+      args:
+        creates: "~/.cert"
 
 
 - name: non privileged tasks
@@ -126,3 +138,46 @@
       user:
         name: "{{ the_user }}"
         shell: /usr/bin/zsh
+
+    #############
+    # shortcuts #
+    #############
+    - name: file browser shortcut
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/home"
+        value: "['<Super>f']"
+
+    - name: web browser shortcut
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/www"
+        value: "['<Super>e']"
+
+
+    - name: terminal shortcut name
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/name"
+        value: "'terminal'"
+    - name: terminal shortcut command
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/command"
+        value: "'ptyxis'"
+    - name: terminal shortcut binding
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/binding"
+        value: "'<Super>t'"
+
+    # All of your custom shortcuts must also be added to an array.
+
+    - name: enable custom keybindings
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+        value: "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']"
+
+    #####################
+    # terminal settings #
+    #####################
+
+    - name: terminal bell
+      dconf:
+        key: "/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/audible-bell"
+        value: "false"
