@@ -1,127 +1,90 @@
----
 - name: Install packages
   hosts: localhost
-  become: yes
+  tags: dnf
   tasks:
-    - name: Ensure nvim is installed.
-      dnf:
-        name: neovim
-        state: present
-    - name: Ensure Tmux is installed
-      dnf:
-        name: tmux
-        state: present
-    - name: Ensure git is installed
-      dnf:
-        name: git
-        state: present
-    - name: Install golang
-      dnf:
-        name: golang
-        state: present
-    - name: Install go docs
-      dnf:
-        name: golang-godoc
-        state: present
-    - name: Install gopls
-      dnf:
-        name: golang-x-tools-gopls
-        state: present
-    - name: Check stow installed
-      dnf:
-        name: stow
-        state: present
-    - name: Check zsh installed
-      dnf:
-        name: zsh
-        state: present
-    - name: Check zsh-syntax installed
-      dnf:
-        name: zsh-syntax-highlighting
-        state: present
-    - name: Check g++ installed
-      dnf:
-        name: g++
-        state: present
-    - name: Check fzf installed
-      dnf:
-        name: fzf
-        state: present
-    - name: Check fd installed
-      dnf:
-        name: fd-find
-        state: present
-    - name: Check jq installed
-      dnf:
-        name: jq
-        state: present
-    - name: Check yq installed
-      dnf:
-        name: yq
-        state: present
-    - name: Check tidy installed
-      dnf:
-        name: tidy
-        state: present
-    - name: Check ripgrep installed
-      dnf:
-        name: ripgrep
-        state: present
-    - name: Check wireshark installed
-      dnf:
-        name: wireshark
-        state: present
-    - name: Check remminna installed
-      dnf:
-        name: remmina
-        state: present
-    - name: Check azure-cli installed
-      dnf:
-        name: azure-cli
-        state: present
-    - name: Check podman-cli installed
-      dnf:
-        name: podman
-        state: present
-    - name: Check helm install
-      dnf:
-        name: helm
-        state: present
-    - name: add hashicorp repo
-      shell: "curl https://rpm.releases.hashicorp.com/fedora/hashicorp.repo >> /etc/yum.repos.d/hashicorp.repo"
-      args:
-        creates: "/etc/yum.repos.d/hashicorp.repo"
-    - name: add kube repo
-      shell: |
-            cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
-            [kubernetes]
-            name=Kubernetes
-            baseurl=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/
-            enabled=1
-            gpgcheck=1
-            gpgkey=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/repodata/repomd.xml.key
-            EOF
-      args:
-        creates: "/etc/yum.repos.d/kubernetes.repo"
-    - name: Check terraform installed
-      dnf:
-        name: terraform
-        state: present
-    - name: Check kubectl installed
-      dnf:
-        name: kubectl
-        state: present
-    - name: create cert dir
-      shell: "mkdir -p ~/.cert && restorecon -R ~/.cert"
-      args:
-        creates: "~/.cert"
+# HashiCorp Repo (for Terraform)
+  - name: Add HashiCorp GPG key
+    become: yes
+    rpm_key:
+      state: present
+      key: https://rpm.releases.hashicorp.com/gpg
 
+  - name: Add HashiCorp repo file
+    become: yes
+    copy:
+      dest: /etc/yum.repos.d/hashicorp.repo
+      content: |
+        [hashicorp]
+        name=HashiCorp Stable - $basearch
+        baseurl=https://rpm.releases.hashicorp.com/fedora/$releasever/$basearch/stable
+        enabled=1
+        gpgcheck=1
+        gpgkey=https://rpm.releases.hashicorp.com/gpg
+# Kubernetes Repo
+  - name: Add Kubernetes Repo
+    become: yes
+    copy:
+      dest: /etc/yum.repos.d/kubernetes.repo
+      content: |
+        [kubernetes]
+        name=Kubernetes
+        baseurl=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/
+        enabled=1
+        gpgcheck=1
+        gpgkey=https://pkgs.k8s.io/core:/stable:/v1.33/rpm/repodata/repomd.xml.key
+  - name: Update DNF cache
+    become: yes
+    dnf:
+      update_cache: yes
+  - name: pip install
+    pip:
+      name:
+        - pyright
+  - name: install packages
+    become: yes
+    dnf:
+      name:
+        - neovim
+        - tmux
+        - git
+        - python3-pip
+        - python3-psutil
+        - golang
+        - golang-godoc
+        - golang-x-tools-gopls
+        - stow
+        - vlc
+        - btop
+        - zsh
+        - zsh-syntax-highlighting
+        - g++
+        - fzf
+        - fd-find
+        - jq
+        - yq
+        - tidy
+        - ripgrep
+        - wireshark
+        - remmina
+        - azure-cli
+        - '@virtualization'
+        - podman
+        - helm
+        - terraform
+        - kubectl
+        - code
+      state: present
+  - name: create cert dir
+    shell: "mkdir -p ~/.cert && restorecon -R ~/.cert"
+    args:
+      creates: "~/.cert"
 
 - name: non privileged tasks
+  tags: config
   hosts: localhost
   tasks:
     - name: run stow
-      shell: "stow --dir /home/rmcle/Rsync/dotfiles --target {{ ansible_env.HOME }} . --verbose=2"
+      shell: "stow --dir /home/rmcle/Rsync/dotfiles --target {{ ansible_env.HOME }} . --verbose=2 --adopt"
       register: result
       changed_when: 'result.stderr is search("LINK: ")'
     - name: Clone tmux package manager
@@ -139,20 +102,14 @@
         name: "{{ the_user }}"
         shell: /usr/bin/zsh
 
+
+- name: gnome configuration
+  hosts: localhost
+  tags: [config, gnome]
+  tasks:
     #############
     # shortcuts #
     #############
-    - name: file browser shortcut
-      dconf:
-        key: "/org/gnome/settings-daemon/plugins/media-keys/home"
-        value: "['<Super>f']"
-
-    - name: web browser shortcut
-      dconf:
-        key: "/org/gnome/settings-daemon/plugins/media-keys/www"
-        value: "['<Super>e']"
-
-
     - name: terminal shortcut name
       dconf:
         key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/name"
@@ -166,18 +123,84 @@
         key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/binding"
         value: "'<Super>t'"
 
+    - name: webbrowser shortcut name
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/name"
+        value: "'webbrowser'"
+    - name: webbrowser shortcut command
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/command"
+        value: "'firefox'"
+    - name: webbrowser shortcut binding
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/binding"
+        value: "'<Super>e'"
+
+    - name: filebowser shortcut name
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/name"
+        value: "'filebrowser'"
+    - name: filebrowser shortcut command
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/command"
+        value: "'nautilus'"
+    - name: filebrowser shortcut binding
+      dconf:
+        key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/binding"
+        value: "'<Super>f'"
+
+    - name: closewindow shortcut
+      dconf:
+        key: "/org/gnome/desktop/wm/keybindings/close"
+        value: "['<Super>x']"
+
     # All of your custom shortcuts must also be added to an array.
 
     - name: enable custom keybindings
       dconf:
         key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
-        value: "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/']"
+        value: "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/']"
 
     #####################
-    # terminal settings #
+    #  settings #
     #####################
+
+    - name: set darkmode
+      dconf:
+        key: "/org/gnome/desktop/interface/color-scheme"
+        value: "'prefer-dark'"
 
     - name: terminal bell
       dconf:
-        key: "/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/audible-bell"
+        key: "/org/gnome/Ptyxis/audible-bell "
         value: "false"
+
+    - name: install fonts
+      shell: mkdir -p ~/.local/share/fonts ~/.local/share/fonts/Hack && curl -L --output ~/.local/share/fonts/Hack/Hack.zip https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/Hack.zip && unzip -o ~/.local/share/fonts/Hack/Hack.zip -d ~/.local/share/fonts/Hack && rm ~/.local/share/fonts/Hack/Hack.zip
+      args:
+        creates: "~/.local/share/fonts/Hack/HackNerdFontMono-Regular.ttf"
+
+    - name: dont use system font
+      dconf:
+        key: "/org/gnome/Ptyxis/use-system-font "
+        value: "false"
+
+    - name: set hacknerdfont
+      dconf:
+        key: "/org/gnome/Ptyxis/font-name"
+        value: "'Hack Nerd Font Mono 10'"
+
+    - name: add world-clocks
+      dconf:
+        key: "/org/gnome/clocks/world-clocks"
+        value: "[{'location': <(uint32 2, <('Hyderabad', 'VOHY', true, [(0.30455995447301049, 1.3695016922159813)], [(0.30325580954933529, 1.3696374264719091)])>)>}, {'location': <(uint32 2, <('Sydney', 'YSSY', true, [(-0.59253928105207498, 2.6386469349889961)], [(-0.59137572239964786, 2.6392287230418559)])>)>}, {'location': <(uint32 2, <('Boston', 'KBOS', true, [(0.73933117517543911, -1.2393680058718144)], [(0.73929408692883414, -1.2402270045697685)])>)>}, {'location': <(uint32 2, <('Colorado Springs', 'KCOS', true, [(0.67746408775426814, -1.8275487983559315)], [(0.67777910223096061, -1.8294779107781611)])>)>}]"
+
+    - name: folders first nautilus
+      dconf:
+        key: "/org/gtk/gtk4/settings/file-chooser/sort-directories-first"
+        value: true
+
+    - name: folders first filepicker
+      dconf:
+        key: "/org/gtk/settings/file-chooser/sort-directories-first"
+        value: true
