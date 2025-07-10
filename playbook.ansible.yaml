@@ -72,7 +72,6 @@
         - helm
         - terraform
         - kubectl
-        - code
       state: present
   - name: create cert dir
     shell: "mkdir -p ~/.cert && restorecon -R ~/.cert"
