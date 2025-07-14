@@ -72,7 +72,8 @@
         - helm
         - terraform
         - kubectl
-      state: present
+        - p7zip
+      state: latest
   - name: create cert dir
     shell: "mkdir -p ~/.cert && restorecon -R ~/.cert"
     args:
@@ -152,6 +153,16 @@
       dconf:
         key: "/org/gnome/desktop/wm/keybindings/close"
         value: "['<Super>x']"
+
+    - name: set screenshot
+      dconf:
+        key: "/org/gnome/shell/keybindings/show-screenshot-ui"
+        value: "['<Super>s']"
+
+    - name: set screen recorder
+      dconf:
+        key: "/org/gnome/shell/keybindings/show-screen-recording-ui"
+        value: "['<Super><Shift>s']"
 
     # All of your custom shortcuts must also be added to an array.
 
